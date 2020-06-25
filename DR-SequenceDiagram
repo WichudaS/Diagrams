@@ -1,0 +1,94 @@
+
+title DR sequence diagram
+
+
+actor USER
+actor PM
+actor CHANNEL
+actor "BUG CHANNEL" as BUG
+participant Slack 
+participant Email
+participant JotForm
+participant Server
+participant Airtable
+
+
+USER -> Slack : /bolt DR
+activate Slack
+Slack -> Server : Find JotForm link
+activate Server
+Server --> Slack : Send Jotform link
+deactivate Server
+Slack --> USER : Post JF link message
+deactivate Slack 
+
+
+USER -> JotForm : Open DR link
+activate JotForm
+JotForm --> USER : Send form webpage
+deactivate JotForm
+
+note over USER : Fill Form
+
+USER -> JotForm : Submit Form
+activate JotForm
+JotForm --> Email : Send form to email server
+deactivate JotForm
+activate Email
+Email --> PM : Send Email to PM's inbox
+deactivate Email
+
+note over PM : Review DR
+
+
+alt PM Approved
+
+PM -> JotForm : Approved with Sign
+activate JotForm
+JotForm -> Server : Submit form
+deactivate JotForm
+
+activate Server 
+Server -> Server : Restructure data
+Server -> Airtable : Store data
+
+activate Airtable
+
+alt Airtable status=OK
+Airtable --> Server : Status OK
+deactivate Airtable
+Server -> JotForm : Find approved DR report
+activate JotForm
+JotForm --> Server : Send approved DR Report
+deactivate JotForm
+Server --> Slack : Send successful message with approved DR report
+deactivate Server
+activate Slack 
+Slack --> CHANNEL : Post message to channel
+deactivate Slack
+
+
+else Airtable status=ERROR
+Airtable --> Server : Send Status ERROR
+activate Server
+Server --> Server : LOG ERROR
+Server --> Slack : Send Bug Message
+deactivate Server
+activate Slack 
+Slack --> BUG : Post Bug message
+deactivate Slack 
+end
+
+
+
+
+else PM NOT approve
+PM -> JotForm : Not approve
+activate JotForm
+JotForm --> Email : Not approve
+deactivate JotForm
+activate Email
+Email --> USER : JotForm result Email
+deactivate Email
+
+note left of USER : Fix DR input data \n and resubmit again
